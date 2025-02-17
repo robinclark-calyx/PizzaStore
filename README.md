@@ -18,7 +18,7 @@ A simple RESTful API for managing a pizza store's menu built with ASP.NET Core a
 ### 1. Clone the Repository
 
 ```bash
-git clone [repository-url]
+git clone git@github.com:noel-srocha/PizzaStore.git
 cd pizza-store
 ```
 
