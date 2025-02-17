@@ -7,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("Pizzas") ?? "Data Source=Pizzas.db";
 
+builder.WebHost.UseUrls("http://localhost:5032");
+
 // Add services to the container.
 builder.Services.AddOpenApi();
 builder.Services.AddSqlite<PizzaDb>(connectionString);
