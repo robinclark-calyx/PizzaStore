@@ -1,8 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+using PizzaStore.Data;
+using PizzaStore.Models;
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("Pizzas") ?? "Data Source=Pizzas.db";
+
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSqlite<PizzaDb>(connectionString);
 
 var app = builder.Build();
 
@@ -10,32 +17,40 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+app.MapGet("/", () => "Hello World!");
+app.MapGet("/pizzas", async (PizzaDb db) => await db.Pizzas.ToListAsync());
+app.MapGet("/pizza/{id:int}", async (PizzaDb db, int id) => await db.Pizzas.FindAsync(id));
+app.MapPost("/pizza", async (PizzaDb db, Pizza pizza) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
+    await db.Pizzas.AddAsync(pizza);
+    await db.SaveChangesAsync();
+    return Results.Created($"/pizza/{pizza.Id}", pizza);
+});
+app.MapPut("/pizza/{id:int}", async (PizzaDb db, Pizza updatedPizza, int id) =>
+{
+    var pizza = await db.Pizzas.FindAsync(id);
+    if (pizza == null)
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
+        return Results.NotFound();
+    }
+    pizza.Name = updatedPizza.Name;
+    pizza.Description = updatedPizza.Description;
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+app.MapDelete("/pizza/{id:int}", async (PizzaDb db, int id) =>
+{
+    var pizza = await db.Pizzas.FindAsync(id);
+    if (pizza == null)
+    {
+        return Results.NotFound();
+    }
+    db.Pizzas.Remove(pizza);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
